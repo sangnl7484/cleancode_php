@@ -7,46 +7,74 @@ use App\Models\User;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use App\Helpers\HelperAPI;
+use Exception;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    /**
+     * @var User
+     */
+    private $userModel;
+
+    /**
+     * @param User $userModel
+     */
+    public function __construct(User $userModel)
     {
-        $user = DB::select("select * from users where email = '$request->email' limit 1");
-        if (isset($user[0])) {
-            $user = User::find($user[0]->id);
-            if (!Hash::check($request->password, $user->password)) {
-                throw ValidationException::withMessages([
-                    'email' => ['The provided credentials are incorrect.'],
-                ]);
-            } else {
-                $token = $user->createToken('main')->plainTextToken;
-                return response([
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'created_at' => (new DateTime($user->created_at))->format('Y-m-d H:i:s'),
-                    ],
-                    'token' => $token
-                ]);
-            }
-        } else {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        $this->userModel = $userModel;
+    }
+
+    /**
+     * Check Login And Create Token Key
+     *
+     * @param Request $request
+     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     */
+    public function login(Request $request): \Illuminate\Http\Response|array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    {
+        try {
+            $user = $this->userModel->authenticate($request);
+            $token = $user->createToken('main')->plainTextToken;
+            $responseData = [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => (new DateTime($user->created_at))->format('Y-m-d H:i:s'),
+                ],
+                'token' => $token
+            ];
+        } catch (Exception $e) {
+            return HelperAPI::responseError($e->getMessage());
         }
+
+        return HelperAPI::responseSuccess($responseData, 'Login success!');
     }
-    public function logout()
+
+    /**
+     * @return array
+     */
+    public function logout(): array
     {
-        $user = Auth::user();
-        $user->currentAccessToken()->delete();
-        return response('', 204);
+        try {
+            $user = Auth::user();
+            $user->currentAccessToken()->delete();
+        } catch (Exception $e) {
+            return HelperAPI::responseError($e->getMessage());
+        }
+
+        return HelperAPI::responseSuccess([],'Logout success!');
     }
-    public function getUser(Request $request)
+
+    /**
+     * Get User Data
+     *
+     * @param Request $request
+     * @return array
+     * @throws Exception
+     */
+    public function getUser(Request $request): array
     {
         $user = $request->user();
         $data = [
@@ -55,6 +83,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'created_at' => (new DateTime($user->created_at))->format('Y-m-d H:i:s'),
         ];
-        return response($data);
+
+        return HelperAPI::responseSuccess($data,'Get User data!');
     }
 }

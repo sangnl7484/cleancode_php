@@ -4,86 +4,70 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
-use App\Models\CustomerAddress;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Response;
+use App\Http\Requests\PostCustomerRequest;
+use App\Helpers\HelperAPI;
+use Exception;
 
 class CustomerController extends Controller
 {
+    /**
+     * @var Customer
+     */
+    private $customerModel;
 
-    public function index(Request $request)
+    /**
+     * @param Customer $customerModel
+     */
+    public function __construct(Customer $customerModel)
     {
-        $search = $request->search;
-        $sortField = $request->sort_field;
-        $sortDirection = $request->sort_direction;
-        $query = Customer::query()
-            ->orderBy("customers.$sortField", $sortDirection);
-        if ($search) {
-            $query->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%")->join('users', 'customers.user_id', '=', 'users.id')->orWhere('users.email', 'like', "%{$search}%")->orWhere('customers.phone', 'like', "%{$search}%");
-        }
-        $data = $query->get();
-        $results = array();
-        foreach ($data as $item) {
-            $results[] = [
-                'id' => $item->user_id,
-                'first_name' => $item->first_name,
-                'last_name' => $item->last_name,
-                'email' => $item->user->email,
-                'phone' => $item->phone,
-                'zipcode' => DB::table('customer_addresses')->select('country_code')->where('customer_id', $item->id)->first()?->zipcode,
-                'order_total' => $item->user->orders->where('status', 2)->count(), // status = 2 is complete
-                'status' => $item->status,
-                'created_at' => (new \DateTime($item->created_at))->format('Y-m-d H:i:s'),
-                'updated_at' => (new \DateTime($item->updated_at))->format('Y-m-d H:i:s'),
-            ];
-        }
-
-        return response($data);
+        $this->customerModel = $customerModel;
     }
 
-    public function update(Request $request)
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+     */
+    public function index(Request $request): \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
     {
-        $customerData = $request->all();
-        $idCustomer = $request->id;
-        $customer = Customer::find($idCustomer);
-        $customerData['updated_by'] = $request->user()->id;
-        $customerData['status'] = $customerData['status'] ? 'active' : 'disabled';
-        $shippingData = $customerData['shippingAddress'];
-        $billingData = $customerData['billingAddress'];
-        if ($customer->update($customerData)) {
-            if ($customer->shippingAddress) {
-                if ($customer->shippingAddress->update($shippingData)) {
-                    if ($customer->billingAddress) {
-                        $customer->billingAddress->update($billingData);
-                    } else {
-                        $billingData['customer_id'] = $customer->user_id;
-                        $billingData['type'] = 'billing';
-                        CustomerAddress::create($billingData);
-                    }
-                }
-            } else {
-                $shippingData['customer_id'] = $customer->user_id;
-                $shippingData['type'] = 'shipping';
-                if (CustomerAddress::create($shippingData)) {
-                    if ($customer->billingAddress) {
-                        $customer->billingAddress->update($billingData);
-                    } else {
-                        $billingData['customer_id'] = $customer->user_id;
-                        $billingData['type'] = 'billing';
-                        CustomerAddress::create($billingData);
-                    }
-                }
+        $customerData = $this->customerModel->getAll($request);
+        return response($customerData);
+    }
+
+    /**
+     * Api update customer data
+     *
+     * @param PostCustomerRequest $request
+     * @return array
+     */
+    public function update(PostCustomerRequest $request)
+    {
+        try {
+            $customerData = $request->all();
+            $customer = $this->customerModel->getCustomerById($request->id);
+            $customerData['updated_by'] = $request->user()->id;
+            $customerData['status'] = $customerData['status'] ? 'active' : 'disabled';
+            foreach (Customer::ADDRESS_TYPE as $type) {
+                $addressData = $customerData[$type];
+                $addressData['customer_id'] = $customer->user_id;
+                $this->customerModel->updateCustomerAddress($addressData);
             }
+        } catch (Exception $e) {
+            return HelperAPI::responseError($e->getMessage());
         }
-        return Response::json($customer);
+
+        return HelperAPI::responseSuccess($customer->getAttributes(), 'Update Customer success!');
     }
 
-
-    public function destroy(Request $request)
+    /**
+     * Api delete customer by customer_id
+     *
+     * @param Request $request
+     * @return array
+     */
+    public function destroy(Request $request): array
     {
-        $id = $request->id;
-        $customer = Customer::find($id)->delete();
-        return response()->noContent();
+        $this->customerModel->deleteById($request->id);
+        return HelperAPI::responseSuccess([], 'Delete Customer success!');
     }
 }
