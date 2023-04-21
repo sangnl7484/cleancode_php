@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductRequest;
 use App\Models\Api\Product;
 use App\Helpers\HelperAPI;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class ProductController extends Controller
      * @param Request $request
      * @return array
      */
-    public function create(Request $request): array
+    public function create(ProductRequest $request): array
     {
         $data = $request->all();
         try {
@@ -37,7 +38,7 @@ class ProductController extends Controller
      * @param Request $request
      * @return array
      */
-    public function update(Request $request)
+    public function update(ProductRequest $request)
     {
         $data = $request->all();
 

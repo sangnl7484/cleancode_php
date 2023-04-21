@@ -166,4 +166,12 @@ class Customer extends Model
             $customer->delete();
         }
     }
+
+    public function getLatestCustomers(){
+        return $this::query()->select(['id', 'first_name', 'last_name', 'u.email', 'phone', 'u.created_at'])
+            ->join('users AS u', 'u.id', '=', 'customers.user_id')
+            ->where('status', 'active')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)->get();
+    }
 }

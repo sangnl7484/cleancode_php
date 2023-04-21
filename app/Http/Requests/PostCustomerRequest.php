@@ -27,15 +27,20 @@ class PostCustomerRequest extends FormRequest
             'status' => 'required',
             'shippingAddress' => 'required',
             'billingAddress' => 'required',
+            'type' => 'required|max:45',
+            'address1' => 'required|max:255',
+            'address2' => 'required|max:255',
+            'city' => 'required|max:255',
+            'zipcode' => 'required|max:45',
+            'state' => 'nullable|max:45',
+            'country_code' => 'required|max:3',
         ];
     }
     public function messages()
     {
         return [
-            'id.required' => 'id is a required field',
-            'status.required' => 'status is a required field',
-            'shippingAddress.required' => 'shippingAddress is a required field',
-            'billingAddress.required' => 'billingAddress is a required field',
+            'required' => ':attribute is a required field',
+            'max' => 'Trường :attribute phải ít hơn :max ký tự',
         ];
     }
 }
