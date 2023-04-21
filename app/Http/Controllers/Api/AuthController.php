@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\HelperAPI;
@@ -41,7 +40,7 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'created_at' => (new DateTime($user->created_at))->format('Y-m-d H:i:s'),
+                    'created_at' => HelperAPI::formatDateTime($user->created_at)
                 ],
                 'token' => $token
             ];
@@ -81,7 +80,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'created_at' => (new DateTime($user->created_at))->format('Y-m-d H:i:s'),
+            'created_at' => HelperAPI::formatDateTime($user->created_at)
         ];
 
         return HelperAPI::responseSuccess($data,'Get User data!');
