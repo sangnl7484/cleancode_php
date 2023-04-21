@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductRequest;
 use App\Models\Api\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -14,20 +16,20 @@ use Illuminate\Support\Str;
 class ProductController extends Controller
 {
 
-    public function create(Request $request)
+    public function create(ProductRequest $request)
     {
         $data = $request->all();
-        $data['created_by'] = $request->user()->id;
-        $data['updated_by'] = $request->user()->id;
-       
-        $image = $data['image'] ?$data['image']: null;
+        $data['created_by'] = Auth::id();
+        $data['updated_by'] = Auth::id();
+
+        $image = $data['image'] ? $data['image']: null;
         //
         if ($image) {
             $path = 'images';
             if(!App::environment('production')){
                 $path = 'images/dev';
             }
-           
+
             $relativePath = Storage::putFile('public/'.$path, $image);
 
             $data['image'] = URL::to(Storage::url($relativePath));
@@ -48,7 +50,7 @@ class ProductController extends Controller
             'created_at' => (new \DateTime($product->created_at))->format('Y-m-d H:i:s'),
             'updated_at' => (new \DateTime($product->updated_at))->format('Y-m-d H:i:s'),
         ];
-      
+
         return response($results);
     }
 
@@ -65,7 +67,7 @@ class ProductController extends Controller
             if(!App::environment('production')){
                 $path = 'images/dev';
             }
-           
+
             $relativePath = Storage::putFile('public/' . $path, $image);
 
             $data['image'] = URL::to(Storage::url($relativePath));
@@ -75,7 +77,7 @@ class ProductController extends Controller
 
         $product = Product::find($request->id);
         $product->update($data);
-    
+
         $results = [
             'id' => $product->id,
             'title' => $product->title,
