@@ -17,6 +17,19 @@ use Illuminate\Contracts\Routing\ResponseFactory;
 
 class DashboardController extends Controller
 {
+    protected $order;
+
+    protected $customer;
+
+    public function __construct(
+        Order $order,
+        Customer $customer
+    )
+    {
+        $this->order = $order;
+        $this->customer = $customer;
+    }
+
     /**
      * Count
      *
@@ -39,35 +52,9 @@ class DashboardController extends Controller
 
             $paidOrders = $query->count();
             $totalIncome = round($query->sum('total_price'));
-
-            $query = Order::query()->select(['c.name', DB::raw('count(orders.id) as count')])
-                    ->join('users', 'created_by', '=', 'users.id')
-                    ->join('customer_addresses AS a', 'users.id', '=', 'a.customer_id')
-                    ->join('countries AS c', 'a.country_code', '=', 'c.code')
-                    ->where('status', 'paid')
-                    ->where('a.type', 'billing')
-                    ->groupBy('c.name');
-
-            if ($fromDate) {
-                $query->where('orders.created_at', '>', $fromDate);
-            }
-
-            $ordersByCountry =  $query->get();
-
-            $latestCustomers =  Customer::query()->select(['id', 'first_name', 'last_name', 'u.email', 'phone', 'u.created_at'])
-                ->join('users AS u', 'u.id', '=', 'customers.user_id')
-                ->where('status', 'active')
-                ->orderBy('created_at', 'desc')
-                ->limit(5)->get();
-
-            $latestOrders = Order::query()->select(['o.id', 'o.total_price', 'o.created_at', DB::raw('COUNT(oi.id) AS items'), 'c.user_id', 'c.first_name', 'c.last_name'])
-                ->from('orders AS o')
-                ->join('order_items AS oi', 'oi.order_id', '=', 'o.id')
-                ->join('customers AS c', 'c.user_id', '=', 'o.created_by')
-                ->where('o.status', 'paid')->limit(10)
-                ->orderBy('o.created_at', 'desc')
-                ->groupBy('o.id', 'o.total_price', 'o.created_at', 'c.user_id', 'c.first_name', 'c.last_name')
-                ->get();
+            $ordersByCountry =  $this->order->getOrdersByCountry($fromDate);
+            $latestCustomers =  $this->customer->getLatestCustomers();
+            $latestOrders = $this->order->getLatestOrders();
 
             return response(compact('activeCustomers', 'activeProducts', 'paidOrders', 'totalIncome', 'ordersByCountry', 'latestCustomers', 'latestOrders'));
         } catch (\Exception $e) {
