@@ -14,7 +14,6 @@ use App\Models\OrderDetail;
 use App\Models\OrderItem;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -79,6 +78,7 @@ class OrderController extends Controller
     public function createOrder(Request $request)
     {
         try {
+            $user = $request->user();
             $orderItems = [];
             $totalPrice = 0;
             $orderDetail = $request->input('orderDetail');
@@ -108,8 +108,8 @@ class OrderController extends Controller
                 $orderData = [
                     'total_price' => $totalPrice,
                     'status' => 'unpaid',
-                    'created_by' => Auth::id(),
-                    'updated_by' => Auth::id(),
+                    'created_by' => $user->id,
+                    'updated_by' => $user->id,
                 ];
 
                 if ($order = Order::create($orderData)) {
