@@ -26,12 +26,12 @@ class CustomerController extends Controller
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+     * @return array
      */
-    public function index(Request $request): \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+    public function index(Request $request): array
     {
         $customerData = $this->customerModel->getAll($request);
-        return response($customerData);
+        return HelperAPI::responseSuccess($customerData->toArray());
     }
 
     /**
