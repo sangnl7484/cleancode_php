@@ -24,7 +24,7 @@ class PostLoginRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|password',
+            'email' => 'required|email',
             'password' => 'required',
         ];
     }
